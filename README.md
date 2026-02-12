@@ -14,14 +14,13 @@ click
 ## Usage
 ### CLI Command
 ```sh
-# 1) Download the package and copy it to clipboard on an online machine
+# 1) Online machine: download the package and copy it to clipboard
 clip copy "requests==2.32.3"
 
 # Optional: download with dependencies
 clip copy "requests==2.32.3" --deps
 
-# 2) Restore wheels from clipboard and install offline on the target machine
-# It automatically follows copy-stage choice: --deps or --no-deps
+# 2) Offline machine: restore wheels from clipboard and install them
 clip install
 
 # Optional: specify the temp dir to store .whl files

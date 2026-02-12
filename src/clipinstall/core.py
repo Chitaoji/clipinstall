@@ -27,7 +27,7 @@ def copy_wheels_to_clipboard(
     wheels = _download_wheels(package_spec, temp_dir, include_deps=include_deps)
 
     parts = [
-        "===MULTI_WHEEL_PACKAGE===",
+        "===CLIPINSTALL_PACKAGE===",
         f"REQ: {package_spec}",
         f"INCLUDE_DEPS: {str(include_deps).lower()}",
     ]
@@ -60,8 +60,8 @@ def restore_wheels_from_clipboard(
 ) -> tuple[str | None, bool, int, float]:
     """Restore wheel files from clipboard payload into *temp_dir*."""
     text = _paste_from_clipboard()
-    if "===MULTI_WHEEL_PACKAGE===" not in text:
-        raise ValueError("Invalid multi-wheel format: missing header")
+    if "===CLIPINSTALL_PACKAGE===" not in text:
+        raise ValueError("Invalid package format: missing header")
 
     if os.path.exists(temp_dir):
         shutil.rmtree(temp_dir)
@@ -140,7 +140,7 @@ def _install_wheels(temp_dir: str, req: str | None, install_deps: bool = True) -
 def restore_and_install(
     temp_dir: str = "temp",
 ) -> tuple[str | None, int, float]:
-    """Restore wheel payload from clipboard and install it offline."""
+    """Restore wheels from clipboard and install them offline."""
     req, install_deps, restored, size_mb = restore_wheels_from_clipboard(
         temp_dir=temp_dir
     )
