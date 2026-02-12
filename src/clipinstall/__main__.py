@@ -14,13 +14,17 @@ def run() -> None:
 
 @run.command("copy")
 @click.argument("package_spec")
-@click.option("--deps/--no-deps", "include_deps", default=True, show_default=True)
+@click.option("--deps/--no-deps", "include_deps", default=False, show_default=True)
 def copy_cmd(package_spec: str, include_deps: bool) -> None:
     """Download wheels for PACKAGE_SPEC and copy them into clipboard."""
-    stats = copy_wheels_to_clipboard(package_spec=package_spec, include_deps=include_deps)
+    stats = copy_wheels_to_clipboard(
+        package_spec=package_spec, include_deps=include_deps
+    )
     click.echo("[OK] Copied wheels to clipboard")
     click.echo(f"REQ: {package_spec}")
-    click.echo(f"Downloaded wheels: {stats['wheel_count']} (include_deps={include_deps})")
+    click.echo(
+        f"Downloaded wheels: {stats['wheel_count']} (include_deps={include_deps})"
+    )
     click.echo(f"Total original size: {stats['original_size_mb']:.2f} MB")
     click.echo(f"Total clipboard size: {stats['clipboard_size_mb']:.2f} MB")
 
