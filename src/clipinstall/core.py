@@ -1,8 +1,8 @@
 """
-Contains the core of template: ... , etc.
+Contains the core of clipinstall: ... , etc.
 
 NOTE: this module is private. All functions and objects are available in the main
-`template` namespace - use that instead.
+`clipinstall` namespace - use that instead.
 
 """
 
