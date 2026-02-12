@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import click
 
-from .core import copy_wheels_to_clipboard, restore_and_install
+from .core import copy_wheels_to_clipboard, restore_wheels_and_install
 
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
@@ -33,7 +33,7 @@ def copy_cmd(package_spec: str, include_deps: bool) -> None:
 @click.option("--temp-dir", default="temp", show_default=True)
 def install_cmd(temp_dir: str) -> None:
     """Restore wheels from clipboard and install them offline."""
-    req, restored, size_mb = restore_and_install(temp_dir=temp_dir)
+    req, restored, size_mb = restore_wheels_and_install(temp_dir=temp_dir)
     click.echo(f"[OK] Restored {restored} wheels into '{temp_dir}'")
     click.echo(f"Total size: {size_mb:.2f} MB")
     if req:

@@ -14,13 +14,13 @@ from pathlib import Path
 
 __all__ = [
     "copy_wheels_to_clipboard",
-    "restore_and_install",
+    "restore_wheels_and_install",
     "restore_wheels_from_clipboard",
 ]
 
 
 def copy_wheels_to_clipboard(
-    package_spec: str, include_deps: bool = True
+    package_spec: str, include_deps: bool = False
 ) -> dict[str, int | float]:
     """Download wheels and encode them into a clipboard payload."""
     temp_dir = tempfile.mkdtemp(prefix="wheel_bundle_")
@@ -57,7 +57,7 @@ def copy_wheels_to_clipboard(
 
 def restore_wheels_from_clipboard(
     temp_dir: str = "temp",
-) -> tuple[str | None, bool, int, float]:
+) -> tuple[str, bool, int, float]:
     """Restore wheel files from clipboard payload into *temp_dir*."""
     text = _paste_from_clipboard()
     if "===CLIPINSTALL_PACKAGE===" not in text:
@@ -68,13 +68,16 @@ def restore_wheels_from_clipboard(
     os.makedirs(temp_dir, exist_ok=True)
 
     pkg = None
-    include_deps = True
+    include_deps = False
     for line in text.splitlines():
         item = line.strip()
         if item.startswith("Package:"):
             pkg = item.split("Package:", 1)[1].strip()
         elif item.startswith("INCLUDE_DEPS:"):
             include_deps = item.split("INCLUDE_DEPS:", 1)[1].strip().lower() == "true"
+
+    if pkg is None:
+        raise ValueError("missing package")
 
     restored = 0
     total_size = 0
@@ -103,7 +106,7 @@ def restore_wheels_from_clipboard(
     return pkg, include_deps, restored, total_size / 1024 / 1024
 
 
-def _install_wheels(temp_dir: str, pkg: str | None, install_deps: bool = True) -> None:
+def _install_wheels(temp_dir: str, pkg: str, install_deps: bool = True) -> None:
     """Install restored wheel files from *temp_dir* without network."""
     common = [
         sys.executable,
@@ -116,30 +119,16 @@ def _install_wheels(temp_dir: str, pkg: str | None, install_deps: bool = True) -
     ]
 
     if install_deps:
-        if pkg:
-            subprocess.run([*common, pkg], check=True)
-        else:
-            wheels = sorted(glob.glob(os.path.join(temp_dir, "*.whl")))
-            if not wheels:
-                raise ValueError(f"No .whl files found in '{temp_dir}'")
-            subprocess.run([*common, *wheels], check=True)
-        return
+        subprocess.run([*common, pkg], check=True)
 
     wheels = sorted(glob.glob(os.path.join(temp_dir, "*.whl")))
     if len(wheels) == 1:
         subprocess.run([*common, wheels[0]], check=True)
-    elif pkg:
-        subprocess.run([*common, pkg, "--no-deps"], check=True)
     else:
-        raise ValueError(
-            "install_deps=False but cannot identify one top-level wheel "
-            "(and package missing)."
-        )
+        subprocess.run([*common, pkg, "--no-deps"], check=True)
 
 
-def restore_and_install(
-    temp_dir: str = "temp",
-) -> tuple[str | None, int, float]:
+def restore_wheels_and_install(temp_dir: str = "temp") -> tuple[str, int, float]:
     """Restore wheels from clipboard and install them offline."""
     pkg, install_deps, restored, size_mb = restore_wheels_from_clipboard(
         temp_dir=temp_dir
@@ -184,7 +173,7 @@ def _paste_from_clipboard() -> str:
 
 
 def _download_wheels(
-    package_spec: str, dest_dir: str, include_deps: bool = True
+    package_spec: str, dest_dir: str, include_deps: bool = False
 ) -> list[str]:
     """Download wheel files for *package_spec* into *dest_dir*."""
     os.makedirs(dest_dir, exist_ok=True)
