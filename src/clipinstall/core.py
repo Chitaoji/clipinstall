@@ -14,11 +14,127 @@ from pathlib import Path
 
 __all__ = [
     "copy_wheels_to_clipboard",
-    "download_wheels",
-    "install_restored_wheels",
-    "restore_to_temp_and_install",
+    "restore_wheels_and_install",
     "restore_wheels_from_clipboard",
 ]
+
+
+def copy_wheels_to_clipboard(
+    package_spec: str, include_deps: bool = False
+) -> dict[str, int | float]:
+    """Download wheels and encode them into a clipboard payload."""
+    temp_dir = tempfile.mkdtemp(prefix="wheel_bundle_")
+    wheels = _download_wheels(package_spec, temp_dir, include_deps=include_deps)
+
+    parts = [
+        "===CLIPINSTALL_PACKAGE===",
+        f"Package: {package_spec}",
+        f"INCLUDE_DEPS: {str(include_deps).lower()}",
+    ]
+    total_size = 0
+
+    for index, path in enumerate(wheels):
+        filename = os.path.basename(path)
+        data = Path(path).read_bytes()
+        total_size += len(data)
+
+        parts.append(f"FILE: {filename}")
+        parts.append(f"SIZE: {len(data)}")
+        parts.append(f"DATA: {base64.b64encode(data).decode('utf-8')}")
+        if index != len(wheels) - 1:
+            parts.append("---NEXT---")
+
+    parts.append("===END===")
+    text = "\n".join(parts)
+    _copy_to_clipboard(text)
+
+    return {
+        "wheel_count": len(wheels),
+        "original_size_mb": total_size / 1024 / 1024,
+        "clipboard_size_mb": len(text) / 1024 / 1024,
+    }
+
+
+def restore_wheels_from_clipboard(
+    temp_dir: str = "temp",
+) -> tuple[str, bool, int, float]:
+    """Restore wheel files from clipboard payload into *temp_dir*."""
+    text = _paste_from_clipboard()
+    if "===CLIPINSTALL_PACKAGE===" not in text:
+        raise ValueError("Invalid package format: missing header")
+
+    if os.path.exists(temp_dir):
+        shutil.rmtree(temp_dir)
+    os.makedirs(temp_dir, exist_ok=True)
+
+    pkg = None
+    include_deps = False
+    for line in text.splitlines():
+        item = line.strip()
+        if item.startswith("Package:"):
+            pkg = item.split("Package:", 1)[1].strip()
+        elif item.startswith("INCLUDE_DEPS:"):
+            include_deps = item.split("INCLUDE_DEPS:", 1)[1].strip().lower() == "true"
+
+    if pkg is None:
+        raise ValueError("missing package spec")
+
+    restored = 0
+    total_size = 0
+
+    for block in text.split("---NEXT---"):
+        filename = None
+        b64_data = None
+        for line in block.splitlines():
+            item = line.strip()
+            if item.startswith("FILE:"):
+                filename = item.split("FILE:", 1)[1].strip()
+            elif item.startswith("DATA:"):
+                b64_data = item.split("DATA:", 1)[1].strip()
+
+        if not filename or not b64_data:
+            continue
+
+        data = base64.b64decode(b64_data)
+        Path(temp_dir, filename).write_bytes(data)
+        restored += 1
+        total_size += len(data)
+
+    if restored == 0:
+        raise ValueError("No wheels found in clipboard data")
+
+    return pkg, include_deps, restored, total_size / 1024 / 1024
+
+
+def restore_wheels_and_install(temp_dir: str = "temp") -> tuple[str, int, float]:
+    """Restore wheels from clipboard and install them offline."""
+    pkg, install_deps, restored, size_mb = restore_wheels_from_clipboard(
+        temp_dir=temp_dir
+    )
+    _install_wheels(temp_dir=temp_dir, pkg=pkg, install_deps=install_deps)
+    return pkg, restored, size_mb
+
+
+def _install_wheels(temp_dir: str, pkg: str, install_deps: bool = True) -> None:
+    """Install restored wheel files from *temp_dir* without network."""
+    common = [
+        sys.executable,
+        "-m",
+        "pip",
+        "install",
+        "--no-index",
+        "--find-links",
+        temp_dir,
+    ]
+
+    if install_deps:
+        subprocess.run([*common, pkg], check=True)
+
+    wheels = sorted(glob.glob(os.path.join(temp_dir, "*.whl")))
+    if len(wheels) == 1:
+        subprocess.run([*common, wheels[0]], check=True)
+    else:
+        subprocess.run([*common, pkg, "--no-deps"], check=True)
 
 
 def _copy_to_clipboard(text: str) -> None:
@@ -56,7 +172,9 @@ def _paste_from_clipboard() -> str:
     return result.stdout
 
 
-def download_wheels(package_spec: str, dest_dir: str, include_deps: bool = True) -> list[str]:
+def _download_wheels(
+    package_spec: str, dest_dir: str, include_deps: bool = False
+) -> list[str]:
     """Download wheel files for *package_spec* into *dest_dir*."""
     os.makedirs(dest_dir, exist_ok=True)
 
@@ -77,121 +195,7 @@ def download_wheels(package_spec: str, dest_dir: str, include_deps: bool = True)
 
     wheels = sorted(glob.glob(os.path.join(dest_dir, "*.whl")))
     if not wheels:
-        raise RuntimeError("No .whl files downloaded (it may have fallen back to source).")
-    return wheels
-
-
-def copy_wheels_to_clipboard(package_spec: str, include_deps: bool = True) -> dict[str, int | float]:
-    """Download wheels and encode them into a clipboard payload."""
-    temp_dir = tempfile.mkdtemp(prefix="wheel_bundle_")
-    wheels = download_wheels(package_spec, temp_dir, include_deps=include_deps)
-
-    parts = ["===MULTI_WHEEL_PACKAGE===", f"REQ: {package_spec}"]
-    total_size = 0
-
-    for index, path in enumerate(wheels):
-        filename = os.path.basename(path)
-        data = Path(path).read_bytes()
-        total_size += len(data)
-
-        parts.append(f"FILE: {filename}")
-        parts.append(f"SIZE: {len(data)}")
-        parts.append(f"DATA: {base64.b64encode(data).decode('utf-8')}")
-        if index != len(wheels) - 1:
-            parts.append("---NEXT---")
-
-    parts.append("===END===")
-    text = "\n".join(parts)
-    _copy_to_clipboard(text)
-
-    return {
-        "wheel_count": len(wheels),
-        "original_size_mb": total_size / 1024 / 1024,
-        "clipboard_size_mb": len(text) / 1024 / 1024,
-    }
-
-
-def restore_wheels_from_clipboard(temp_dir: str = "temp") -> tuple[str | None, int, float]:
-    """Restore wheel files from clipboard payload into *temp_dir*."""
-    text = _paste_from_clipboard()
-    if "===MULTI_WHEEL_PACKAGE===" not in text:
-        raise ValueError("Invalid multi-wheel format: missing header")
-
-    if os.path.exists(temp_dir):
-        shutil.rmtree(temp_dir)
-    os.makedirs(temp_dir, exist_ok=True)
-
-    req = None
-    for line in text.splitlines():
-        item = line.strip()
-        if item.startswith("REQ:"):
-            req = item.split("REQ:", 1)[1].strip()
-            break
-
-    restored = 0
-    total_size = 0
-
-    for block in text.split("---NEXT---"):
-        filename = None
-        b64_data = None
-        for line in block.splitlines():
-            item = line.strip()
-            if item.startswith("FILE:"):
-                filename = item.split("FILE:", 1)[1].strip()
-            elif item.startswith("DATA:"):
-                b64_data = item.split("DATA:", 1)[1].strip()
-
-        if not filename or not b64_data:
-            continue
-
-        data = base64.b64decode(b64_data)
-        Path(temp_dir, filename).write_bytes(data)
-        restored += 1
-        total_size += len(data)
-
-    if restored == 0:
-        raise ValueError("No wheels found in clipboard data")
-
-    return req, restored, total_size / 1024 / 1024
-
-
-def install_restored_wheels(
-    temp_dir: str, req: str | None, install_deps: bool = True
-) -> None:
-    """Install restored wheel files from *temp_dir* without network."""
-    common = [
-        sys.executable,
-        "-m",
-        "pip",
-        "install",
-        "--no-index",
-        "--find-links",
-        temp_dir,
-    ]
-
-    if install_deps:
-        if req:
-            subprocess.run([*common, req], check=True)
-        else:
-            wheels = sorted(glob.glob(os.path.join(temp_dir, "*.whl")))
-            if not wheels:
-                raise ValueError(f"No .whl files found in '{temp_dir}'")
-            subprocess.run([*common, *wheels], check=True)
-        return
-
-    wheels = sorted(glob.glob(os.path.join(temp_dir, "*.whl")))
-    if len(wheels) == 1:
-        subprocess.run([*common, wheels[0]], check=True)
-    elif req:
-        subprocess.run([*common, req, "--no-deps"], check=True)
-    else:
-        raise ValueError(
-            "install_deps=False but cannot identify one top-level wheel (and REQ missing)."
+        raise RuntimeError(
+            "No .whl files downloaded (it may have fallen back to source)."
         )
-
-
-def restore_to_temp_and_install(temp_dir: str = "temp", install_deps: bool = True) -> tuple[str | None, int, float]:
-    """Restore wheel payload from clipboard and install it offline."""
-    req, restored, size_mb = restore_wheels_from_clipboard(temp_dir=temp_dir)
-    install_restored_wheels(temp_dir=temp_dir, req=req, install_deps=install_deps)
-    return req, restored, size_mb
+    return wheels

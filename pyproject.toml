@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "clipinstall"
 version = "0.0.0"
-dependencies = ["click>=8.0"]
+dependencies = ["click"]
 requires-python = ">=3.12"
 authors = [
   {name = "Chitaoji", email = "2360742040@qq.com"},
@@ -28,4 +28,4 @@ Documentation = "https://github.com/Chitaoji/clipinstall/blob/main/README.md"
 Repository = "https://github.com/Chitaoji/clipinstall/"
 
 [project.scripts]
-clip = "clipinstall.__main__:run"
+clipin = "clipinstall.__main__:run"
