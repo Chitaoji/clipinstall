@@ -77,7 +77,7 @@ def restore_wheels_from_clipboard(
             include_deps = item.split("INCLUDE_DEPS:", 1)[1].strip().lower() == "true"
 
     if pkg is None:
-        raise ValueError("missing package")
+        raise ValueError("missing package spec")
 
     restored = 0
     total_size = 0
