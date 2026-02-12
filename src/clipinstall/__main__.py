@@ -31,13 +31,9 @@ def copy_cmd(package_spec: str, include_deps: bool) -> None:
 
 @run.command("install")
 @click.option("--temp-dir", default="temp", show_default=True)
-@click.option("--deps/--no-deps", "install_deps", default=True, show_default=True)
-def install_cmd(temp_dir: str, install_deps: bool) -> None:
+def install_cmd(temp_dir: str) -> None:
     """Restore wheels from clipboard and install them offline."""
-    req, restored, size_mb = restore_to_temp_and_install(
-        temp_dir=temp_dir,
-        install_deps=install_deps,
-    )
+    req, restored, size_mb = restore_to_temp_and_install(temp_dir=temp_dir)
     click.echo(f"[OK] Restored {restored} wheels into '{temp_dir}'")
     click.echo(f"Total size: {size_mb:.2f} MB")
     if req:

@@ -86,7 +86,11 @@ def copy_wheels_to_clipboard(package_spec: str, include_deps: bool = True) -> di
     temp_dir = tempfile.mkdtemp(prefix="wheel_bundle_")
     wheels = download_wheels(package_spec, temp_dir, include_deps=include_deps)
 
-    parts = ["===MULTI_WHEEL_PACKAGE===", f"REQ: {package_spec}"]
+    parts = [
+        "===MULTI_WHEEL_PACKAGE===",
+        f"REQ: {package_spec}",
+        f"INCLUDE_DEPS: {str(include_deps).lower()}",
+    ]
     total_size = 0
 
     for index, path in enumerate(wheels):
@@ -111,7 +115,7 @@ def copy_wheels_to_clipboard(package_spec: str, include_deps: bool = True) -> di
     }
 
 
-def restore_wheels_from_clipboard(temp_dir: str = "temp") -> tuple[str | None, int, float]:
+def restore_wheels_from_clipboard(temp_dir: str = "temp") -> tuple[str | None, bool, int, float]:
     """Restore wheel files from clipboard payload into *temp_dir*."""
     text = _paste_from_clipboard()
     if "===MULTI_WHEEL_PACKAGE===" not in text:
@@ -122,11 +126,13 @@ def restore_wheels_from_clipboard(temp_dir: str = "temp") -> tuple[str | None, i
     os.makedirs(temp_dir, exist_ok=True)
 
     req = None
+    include_deps = True
     for line in text.splitlines():
         item = line.strip()
         if item.startswith("REQ:"):
             req = item.split("REQ:", 1)[1].strip()
-            break
+        elif item.startswith("INCLUDE_DEPS:"):
+            include_deps = item.split("INCLUDE_DEPS:", 1)[1].strip().lower() == "true"
 
     restored = 0
     total_size = 0
@@ -152,7 +158,7 @@ def restore_wheels_from_clipboard(temp_dir: str = "temp") -> tuple[str | None, i
     if restored == 0:
         raise ValueError("No wheels found in clipboard data")
 
-    return req, restored, total_size / 1024 / 1024
+    return req, include_deps, restored, total_size / 1024 / 1024
 
 
 def install_restored_wheels(
@@ -190,8 +196,8 @@ def install_restored_wheels(
         )
 
 
-def restore_to_temp_and_install(temp_dir: str = "temp", install_deps: bool = True) -> tuple[str | None, int, float]:
+def restore_to_temp_and_install(temp_dir: str = "temp") -> tuple[str | None, int, float]:
     """Restore wheel payload from clipboard and install it offline."""
-    req, restored, size_mb = restore_wheels_from_clipboard(temp_dir=temp_dir)
+    req, install_deps, restored, size_mb = restore_wheels_from_clipboard(temp_dir=temp_dir)
     install_restored_wheels(temp_dir=temp_dir, req=req, install_deps=install_deps)
     return req, restored, size_mb

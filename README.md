@@ -21,6 +21,7 @@ clip copy "requests==2.32.3"
 clip copy "requests==2.32.3" --deps
 
 # 2) Restore wheels from clipboard and install offline on the target machine
+# It automatically follows copy-stage choice: --deps or --no-deps
 clip install
 
 # Optional: specify the temp dir to store .whl files
