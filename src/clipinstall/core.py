@@ -106,6 +106,15 @@ def restore_wheels_from_clipboard(
     return pkg, include_deps, restored, total_size / 1024 / 1024
 
 
+def restore_wheels_and_install(temp_dir: str = "temp") -> tuple[str, int, float]:
+    """Restore wheels from clipboard and install them offline."""
+    pkg, install_deps, restored, size_mb = restore_wheels_from_clipboard(
+        temp_dir=temp_dir
+    )
+    _install_wheels(temp_dir=temp_dir, pkg=pkg, install_deps=install_deps)
+    return pkg, restored, size_mb
+
+
 def _install_wheels(temp_dir: str, pkg: str, install_deps: bool = True) -> None:
     """Install restored wheel files from *temp_dir* without network."""
     common = [
@@ -126,15 +135,6 @@ def _install_wheels(temp_dir: str, pkg: str, install_deps: bool = True) -> None:
         subprocess.run([*common, wheels[0]], check=True)
     else:
         subprocess.run([*common, pkg, "--no-deps"], check=True)
-
-
-def restore_wheels_and_install(temp_dir: str = "temp") -> tuple[str, int, float]:
-    """Restore wheels from clipboard and install them offline."""
-    pkg, install_deps, restored, size_mb = restore_wheels_from_clipboard(
-        temp_dir=temp_dir
-    )
-    _install_wheels(temp_dir=temp_dir, pkg=pkg, install_deps=install_deps)
-    return pkg, restored, size_mb
 
 
 def _copy_to_clipboard(text: str) -> None:

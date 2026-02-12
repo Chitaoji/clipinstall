@@ -15,16 +15,16 @@ click
 ### CLI Command
 ```sh
 # 1) Online machine: download the package and copy it to clipboard
-clip copy "requests==2.32.3"
+clipin copy requests==2.32.3
 
 # Optional: download with dependencies
-clip copy "requests==2.32.3" --deps
+clipin copy requests==2.32.3 --deps
 
 # 2) Offline machine: restore wheels from clipboard and install them
-clip install
+clipin install
 
 # Optional: specify the temp dir to store .whl files
-clip install --temp-dir temp
+clipin install --temp-dir temp
 ```
 
 ## See Also
