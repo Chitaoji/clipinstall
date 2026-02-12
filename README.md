@@ -3,42 +3,39 @@ Install packages through clipboard.
 
 ## Installation
 ```sh
-*auto-generated*
+$ pip install clipinstall
 ```
 
 ## Requirements
 ```txt
-*auto-generated*
+click
 ```
 
 ## Usage
+### CLI Command
 ```sh
-# 1) Download wheels and copy them to clipboard on an online machine (includes deps by default)
+# 1) Download the package and copy it to clipboard on an online machine
 clip copy "requests==2.32.3"
 
+# Optional: download with dependencies
+clip copy "requests==2.32.3" --deps
+
 # 2) Restore wheels from clipboard and install offline on the target machine
+clip install
+
+# Optional: specify the temp dir to store .whl files
 clip install --temp-dir temp
-
-# Optional: copy only the top-level package wheel
-clip copy "requests==2.32.3" --no-deps
-
-# Optional: install without dependency resolution
-clip install --no-deps
 ```
-
-Notes:
-- `clip copy` encodes wheel files into the clipboard text payload.
-- `clip install` restores `.whl` files to a temporary directory and installs with `pip --no-index --find-links`.
 
 ## See Also
 ### Github repository
-* *auto-generated*
+* https://github.com/Chitaoji/clipinstall/
 
 ### PyPI project
-* *auto-generated*
+* https://pypi.org/project/clipinstall/
 
 ## License
-*auto-generated*
+This project falls under the BSD 3-Clause License.
 
 ## History
 ### v0.0.0
