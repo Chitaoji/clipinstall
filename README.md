@@ -1,5 +1,5 @@
-# *auto-generated*
-A template repository for building python packages.
+# clipinstall
+Install packages through clipboard.
 
 ## Installation
 ```sh

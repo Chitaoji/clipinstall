@@ -1,6 +1,6 @@
 """
-# template
-A template repository for building python packages.
+# clipinstall
+Install packages through clipboard.
 
 ## See Also
 ### Github repository
