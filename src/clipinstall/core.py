@@ -14,77 +14,17 @@ from pathlib import Path
 
 __all__ = [
     "copy_wheels_to_clipboard",
-    "download_wheels",
-    "install_restored_wheels",
-    "restore_to_temp_and_install",
+    "restore_and_install",
     "restore_wheels_from_clipboard",
 ]
 
 
-def _copy_to_clipboard(text: str) -> None:
-    """Copy text to the system clipboard."""
-    system = platform.system()
-    if system == "Windows":
-        subprocess.run("clip", input=text.encode("utf-16le"), check=True)
-    elif system == "Darwin":
-        subprocess.run(["pbcopy"], input=text.encode("utf-8"), check=True)
-    else:
-        subprocess.run(
-            ["xclip", "-selection", "clipboard"], input=text.encode("utf-8"), check=True
-        )
-
-
-def _paste_from_clipboard() -> str:
-    """Read text from the system clipboard."""
-    system = platform.system()
-    if system == "Windows":
-        result = subprocess.run(
-            ["powershell", "-NoProfile", "-Command", "Get-Clipboard -Raw"],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-    elif system == "Darwin":
-        result = subprocess.run(["pbpaste"], capture_output=True, text=True, check=True)
-    else:
-        result = subprocess.run(
-            ["xclip", "-selection", "clipboard", "-o"],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-    return result.stdout
-
-
-def download_wheels(package_spec: str, dest_dir: str, include_deps: bool = True) -> list[str]:
-    """Download wheel files for *package_spec* into *dest_dir*."""
-    os.makedirs(dest_dir, exist_ok=True)
-
-    cmd = [
-        sys.executable,
-        "-m",
-        "pip",
-        "download",
-        package_spec,
-        "--only-binary=:all:",
-        "--dest",
-        dest_dir,
-    ]
-    if not include_deps:
-        cmd.append("--no-deps")
-
-    subprocess.run(cmd, check=True)
-
-    wheels = sorted(glob.glob(os.path.join(dest_dir, "*.whl")))
-    if not wheels:
-        raise RuntimeError("No .whl files downloaded (it may have fallen back to source).")
-    return wheels
-
-
-def copy_wheels_to_clipboard(package_spec: str, include_deps: bool = True) -> dict[str, int | float]:
+def copy_wheels_to_clipboard(
+    package_spec: str, include_deps: bool = True
+) -> dict[str, int | float]:
     """Download wheels and encode them into a clipboard payload."""
     temp_dir = tempfile.mkdtemp(prefix="wheel_bundle_")
-    wheels = download_wheels(package_spec, temp_dir, include_deps=include_deps)
+    wheels = _download_wheels(package_spec, temp_dir, include_deps=include_deps)
 
     parts = [
         "===MULTI_WHEEL_PACKAGE===",
@@ -115,7 +55,9 @@ def copy_wheels_to_clipboard(package_spec: str, include_deps: bool = True) -> di
     }
 
 
-def restore_wheels_from_clipboard(temp_dir: str = "temp") -> tuple[str | None, bool, int, float]:
+def restore_wheels_from_clipboard(
+    temp_dir: str = "temp",
+) -> tuple[str | None, bool, int, float]:
     """Restore wheel files from clipboard payload into *temp_dir*."""
     text = _paste_from_clipboard()
     if "===MULTI_WHEEL_PACKAGE===" not in text:
@@ -161,9 +103,7 @@ def restore_wheels_from_clipboard(temp_dir: str = "temp") -> tuple[str | None, b
     return req, include_deps, restored, total_size / 1024 / 1024
 
 
-def install_restored_wheels(
-    temp_dir: str, req: str | None, install_deps: bool = True
-) -> None:
+def _install_wheels(temp_dir: str, req: str | None, install_deps: bool = True) -> None:
     """Install restored wheel files from *temp_dir* without network."""
     common = [
         sys.executable,
@@ -192,12 +132,81 @@ def install_restored_wheels(
         subprocess.run([*common, req, "--no-deps"], check=True)
     else:
         raise ValueError(
-            "install_deps=False but cannot identify one top-level wheel (and REQ missing)."
+            "install_deps=False but cannot identify one top-level wheel "
+            "(and REQ missing)."
         )
 
 
-def restore_to_temp_and_install(temp_dir: str = "temp") -> tuple[str | None, int, float]:
+def restore_and_install(
+    temp_dir: str = "temp",
+) -> tuple[str | None, int, float]:
     """Restore wheel payload from clipboard and install it offline."""
-    req, install_deps, restored, size_mb = restore_wheels_from_clipboard(temp_dir=temp_dir)
-    install_restored_wheels(temp_dir=temp_dir, req=req, install_deps=install_deps)
+    req, install_deps, restored, size_mb = restore_wheels_from_clipboard(
+        temp_dir=temp_dir
+    )
+    _install_wheels(temp_dir=temp_dir, req=req, install_deps=install_deps)
     return req, restored, size_mb
+
+
+def _copy_to_clipboard(text: str) -> None:
+    """Copy text to the system clipboard."""
+    system = platform.system()
+    if system == "Windows":
+        subprocess.run("clip", input=text.encode("utf-16le"), check=True)
+    elif system == "Darwin":
+        subprocess.run(["pbcopy"], input=text.encode("utf-8"), check=True)
+    else:
+        subprocess.run(
+            ["xclip", "-selection", "clipboard"], input=text.encode("utf-8"), check=True
+        )
+
+
+def _paste_from_clipboard() -> str:
+    """Read text from the system clipboard."""
+    system = platform.system()
+    if system == "Windows":
+        result = subprocess.run(
+            ["powershell", "-NoProfile", "-Command", "Get-Clipboard -Raw"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    elif system == "Darwin":
+        result = subprocess.run(["pbpaste"], capture_output=True, text=True, check=True)
+    else:
+        result = subprocess.run(
+            ["xclip", "-selection", "clipboard", "-o"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    return result.stdout
+
+
+def _download_wheels(
+    package_spec: str, dest_dir: str, include_deps: bool = True
+) -> list[str]:
+    """Download wheel files for *package_spec* into *dest_dir*."""
+    os.makedirs(dest_dir, exist_ok=True)
+
+    cmd = [
+        sys.executable,
+        "-m",
+        "pip",
+        "download",
+        package_spec,
+        "--only-binary=:all:",
+        "--dest",
+        dest_dir,
+    ]
+    if not include_deps:
+        cmd.append("--no-deps")
+
+    subprocess.run(cmd, check=True)
+
+    wheels = sorted(glob.glob(os.path.join(dest_dir, "*.whl")))
+    if not wheels:
+        raise RuntimeError(
+            "No .whl files downloaded (it may have fallen back to source)."
+        )
+    return wheels
