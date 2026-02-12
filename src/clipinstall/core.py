@@ -28,7 +28,7 @@ def copy_wheels_to_clipboard(
 
     parts = [
         "===CLIPINSTALL_PACKAGE===",
-        f"REQ: {package_spec}",
+        f"Package: {package_spec}",
         f"INCLUDE_DEPS: {str(include_deps).lower()}",
     ]
     total_size = 0
@@ -67,12 +67,12 @@ def restore_wheels_from_clipboard(
         shutil.rmtree(temp_dir)
     os.makedirs(temp_dir, exist_ok=True)
 
-    req = None
+    pkg = None
     include_deps = True
     for line in text.splitlines():
         item = line.strip()
-        if item.startswith("REQ:"):
-            req = item.split("REQ:", 1)[1].strip()
+        if item.startswith("Package:"):
+            pkg = item.split("Package:", 1)[1].strip()
         elif item.startswith("INCLUDE_DEPS:"):
             include_deps = item.split("INCLUDE_DEPS:", 1)[1].strip().lower() == "true"
 
@@ -100,10 +100,10 @@ def restore_wheels_from_clipboard(
     if restored == 0:
         raise ValueError("No wheels found in clipboard data")
 
-    return req, include_deps, restored, total_size / 1024 / 1024
+    return pkg, include_deps, restored, total_size / 1024 / 1024
 
 
-def _install_wheels(temp_dir: str, req: str | None, install_deps: bool = True) -> None:
+def _install_wheels(temp_dir: str, pkg: str | None, install_deps: bool = True) -> None:
     """Install restored wheel files from *temp_dir* without network."""
     common = [
         sys.executable,
@@ -116,8 +116,8 @@ def _install_wheels(temp_dir: str, req: str | None, install_deps: bool = True) -
     ]
 
     if install_deps:
-        if req:
-            subprocess.run([*common, req], check=True)
+        if pkg:
+            subprocess.run([*common, pkg], check=True)
         else:
             wheels = sorted(glob.glob(os.path.join(temp_dir, "*.whl")))
             if not wheels:
@@ -128,12 +128,12 @@ def _install_wheels(temp_dir: str, req: str | None, install_deps: bool = True) -
     wheels = sorted(glob.glob(os.path.join(temp_dir, "*.whl")))
     if len(wheels) == 1:
         subprocess.run([*common, wheels[0]], check=True)
-    elif req:
-        subprocess.run([*common, req, "--no-deps"], check=True)
+    elif pkg:
+        subprocess.run([*common, pkg, "--no-deps"], check=True)
     else:
         raise ValueError(
             "install_deps=False but cannot identify one top-level wheel "
-            "(and REQ missing)."
+            "(and package missing)."
         )
 
 
@@ -141,11 +141,11 @@ def restore_and_install(
     temp_dir: str = "temp",
 ) -> tuple[str | None, int, float]:
     """Restore wheels from clipboard and install them offline."""
-    req, install_deps, restored, size_mb = restore_wheels_from_clipboard(
+    pkg, install_deps, restored, size_mb = restore_wheels_from_clipboard(
         temp_dir=temp_dir
     )
-    _install_wheels(temp_dir=temp_dir, req=req, install_deps=install_deps)
-    return req, restored, size_mb
+    _install_wheels(temp_dir=temp_dir, pkg=pkg, install_deps=install_deps)
+    return pkg, restored, size_mb
 
 
 def _copy_to_clipboard(text: str) -> None:

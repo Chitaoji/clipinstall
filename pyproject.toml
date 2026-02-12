@@ -28,4 +28,4 @@ Documentation = "https://github.com/Chitaoji/clipinstall/blob/main/README.md"
 Repository = "https://github.com/Chitaoji/clipinstall/"
 
 [project.scripts]
-clip = "clipinstall.__main__:run"
+clipin = "clipinstall.__main__:run"
