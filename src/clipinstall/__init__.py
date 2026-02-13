@@ -1,21 +1,31 @@
 """
 # clipinstall
-Install packages through clipboard.
+Install packages on an offline machine through clipboard.
 
 ## Usage
 ### CLI Command
 ```sh
-# 1) Online machine: download the package and copy it to clipboard
-clip copy "requests==2.32.3"
+# 1) Download the package and copy it to clipboard on an online machine
+clipin copy requests==2.32.3
 
 # Optional: download with dependencies
-clip copy "requests==2.32.3" --deps
+clipin copy requests==2.32.3 --deps
 
-# 2) Offline machine: restore wheels from clipboard and install them
-clip install
+# 2) Restore wheels from clipboard and install them on the target machine
+clipin install
 
-# Optional: specify the temp dir to store .whl files
-clip install --temp-dir temp
+# Optional: specify the temp dir to store .whl files, the temp dir will be removed after
+# successful installation
+clipin install --dir temp
+
+# Optional: don't remove the temp files after installation
+clipin install --no-clean
+
+# 3) Restore wheels from clipboard only (no installation)
+clipin paste
+
+# Optional: specify the dir to store .whl files
+clipin paste --dir temp
 ```
 
 ## See Also
@@ -31,7 +41,7 @@ This project falls under the BSD 3-Clause License.
 """
 
 from . import core
-from .__version__ import __version__
+from ._version import __version__
 from .core import *
 
 __all__: list[str] = []
