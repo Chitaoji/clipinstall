@@ -23,11 +23,12 @@ clipin copy requests==2.32.3 --deps
 # 2) Restore wheels from clipboard and install them on the target machine
 clipin install
 
-# Optional: specify the dir to store .whl files
+# Optional: specify the temp dir to store .whl files, the temp dir will be removed after 
+# successful installation
 clipin install --dir temp
 
-# Optional: remove temp files after successful install
-clipin install --clean
+# Optional: don't remove the temp files after installation
+clipin install --no-clean
 
 # 3) Restore wheels from clipboard only (no installation)
 clipin paste

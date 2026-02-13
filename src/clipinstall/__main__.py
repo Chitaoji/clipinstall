@@ -39,7 +39,7 @@ def copy(package_spec: str, include_deps: bool) -> None:
 
 @run.command()
 @click.option("--dir", "target_dir", default="temp", show_default=True)
-@click.option("--clean/--no-clean", default=False, show_default=True)
+@click.option("--clean/--no-clean", default=True, show_default=True)
 def install(target_dir: str, clean: bool) -> None:
     """Restore wheels from clipboard and install them offline."""
     target_dir_exists = os.path.isdir(target_dir)
@@ -55,7 +55,9 @@ def install(target_dir: str, clean: bool) -> None:
         if target_dir_exists:
             for wheel in glob.glob(os.path.join(target_dir, "*.whl")):
                 os.remove(wheel)
-            click.echo(f"[OK] Cleaned restored wheels from existing directory: {target_dir}")
+            click.echo(
+                f"[OK] Cleaned restored wheels from existing directory: {target_dir}"
+            )
         else:
             shutil.rmtree(target_dir, ignore_errors=True)
             click.echo(f"[OK] Removed temp directory: {target_dir}")
