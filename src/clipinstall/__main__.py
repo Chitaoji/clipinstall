@@ -2,9 +2,15 @@
 
 from __future__ import annotations
 
+import shutil
+
 import click
 
-from .core import copy_wheels_to_clipboard, restore_wheels_and_install
+from .core import (
+    copy_wheels_to_clipboard,
+    restore_wheels_and_install,
+    restore_wheels_from_clipboard,
+)
 
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
@@ -30,12 +36,29 @@ def copy_cmd(package_spec: str, include_deps: bool) -> None:
 
 
 @run.command("install")
-@click.option("--temp-dir", default="temp", show_default=True)
-def install_cmd(temp_dir: str) -> None:
+@click.option("--dir", "target_dir", default="temp", show_default=True)
+@click.option("--clean/--no-clean", default=False, show_default=True)
+def install_cmd(target_dir: str, clean: bool) -> None:
     """Restore wheels from clipboard and install them offline."""
-    pkg, restored, size_mb = restore_wheels_and_install(temp_dir=temp_dir)
-    click.echo(f"[OK] Restored {restored} wheels into '{temp_dir}'")
+    pkg, restored, size_mb = restore_wheels_and_install(temp_dir=target_dir)
+    click.echo(f"[OK] Restored {restored} wheels into '{target_dir}'")
     click.echo(f"Total size: {size_mb:.2f} MB")
     if pkg:
         click.echo(f"Package: {pkg}")
     click.echo("[OK] Installation complete.")
+
+    if clean:
+        shutil.rmtree(target_dir, ignore_errors=True)
+        click.echo(f"[OK] Removed temp directory: {target_dir}")
+
+
+@run.command("paste")
+@click.option("--dir", "target_dir", default="temp", show_default=True)
+def paste_cmd(target_dir: str) -> None:
+    """Restore wheels from clipboard into a folder without installing."""
+    pkg, _, restored, size_mb = restore_wheels_from_clipboard(temp_dir=target_dir)
+    click.echo(f"[OK] Restored {restored} wheels into '{target_dir}'")
+    click.echo(f"Total size: {size_mb:.2f} MB")
+    if pkg:
+        click.echo(f"Package: {pkg}")
+    click.echo("[OK] Paste complete (no installation performed).")
