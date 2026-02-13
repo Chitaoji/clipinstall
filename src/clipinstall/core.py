@@ -6,7 +6,6 @@ import base64
 import glob
 import os
 import platform
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -63,9 +62,12 @@ def restore_wheels_from_clipboard(
     if "===CLIPINSTALL_PACKAGE===" not in text:
         raise ValueError("Invalid package format: missing header")
 
-    if os.path.exists(temp_dir):
-        shutil.rmtree(temp_dir)
+    if os.path.exists(temp_dir) and not os.path.isdir(temp_dir):
+        raise ValueError(f"Target path exists and is not a directory: {temp_dir}")
+
     os.makedirs(temp_dir, exist_ok=True)
+    for wheel in glob.glob(os.path.join(temp_dir, "*.whl")):
+        os.remove(wheel)
 
     pkg = None
     include_deps = False
