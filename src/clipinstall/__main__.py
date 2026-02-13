@@ -18,10 +18,10 @@ def run() -> None:
     """Install Python packages through clipboard-transferred wheels."""
 
 
-@run.command("copy")
+@run.command()
 @click.argument("package_spec")
 @click.option("--deps/--no-deps", "include_deps", default=False, show_default=True)
-def copy_cmd(package_spec: str, include_deps: bool) -> None:
+def copy(package_spec: str, include_deps: bool) -> None:
     """Download wheels for PACKAGE_SPEC and copy them into clipboard."""
     stats = copy_wheels_to_clipboard(
         package_spec=package_spec, include_deps=include_deps
@@ -35,10 +35,10 @@ def copy_cmd(package_spec: str, include_deps: bool) -> None:
     click.echo(f"Total clipboard size: {stats['clipboard_size_mb']:.2f} MB")
 
 
-@run.command("install")
+@run.command()
 @click.option("--dir", "target_dir", default="temp", show_default=True)
 @click.option("--clean/--no-clean", default=False, show_default=True)
-def install_cmd(target_dir: str, clean: bool) -> None:
+def install(target_dir: str, clean: bool) -> None:
     """Restore wheels from clipboard and install them offline."""
     pkg, restored, size_mb = restore_wheels_and_install(temp_dir=target_dir)
     click.echo(f"[OK] Restored {restored} wheels into '{target_dir}'")
@@ -52,9 +52,9 @@ def install_cmd(target_dir: str, clean: bool) -> None:
         click.echo(f"[OK] Removed temp directory: {target_dir}")
 
 
-@run.command("paste")
+@run.command()
 @click.option("--dir", "target_dir", default="temp", show_default=True)
-def paste_cmd(target_dir: str) -> None:
+def paste(target_dir: str) -> None:
     """Restore wheels from clipboard into a folder without installing."""
     pkg, _, restored, size_mb = restore_wheels_from_clipboard(temp_dir=target_dir)
     click.echo(f"[OK] Restored {restored} wheels into '{target_dir}'")

@@ -1,21 +1,30 @@
 """
 # clipinstall
-Install packages through clipboard.
+Install packages on an offline machine through clipboard.
 
 ## Usage
 ### CLI Command
 ```sh
-# 1) Online machine: download the package and copy it to clipboard
-clip copy "requests==2.32.3"
+# 1) Download the package and copy it to clipboard on an online machine
+clipin copy requests==2.32.3
 
 # Optional: download with dependencies
-clip copy "requests==2.32.3" --deps
+clipin copy requests==2.32.3 --deps
 
-# 2) Offline machine: restore wheels from clipboard and install them
-clip install
+# 2) Restore wheels from clipboard and install them on the target machine
+clipin install
 
 # Optional: specify the temp dir to store .whl files
-clip install --temp-dir temp
+clipin install --dir temp
+
+# Optional: remove temp files after successful install
+clipin install --clean
+
+# 3) Restore wheels from clipboard only (no installation)
+clipin paste
+
+# Optional: specify destination dir when pasting only
+clipin paste --dir temp
 ```
 
 ## See Also
