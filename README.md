@@ -25,6 +25,12 @@ clipin install
 
 # Optional: specify the temp dir to store .whl files
 clipin install --temp-dir temp
+
+# 3) Restore wheels from clipboard only (no installation)
+clipin paste
+
+# Optional: specify destination dir when pasting only
+clipin paste --temp-dir temp
 ```
 
 ## See Also

@@ -4,7 +4,11 @@ from __future__ import annotations
 
 import click
 
-from .core import copy_wheels_to_clipboard, restore_wheels_and_install
+from .core import (
+    copy_wheels_to_clipboard,
+    restore_wheels_and_install,
+    restore_wheels_from_clipboard,
+)
 
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
@@ -39,3 +43,15 @@ def install_cmd(temp_dir: str) -> None:
     if pkg:
         click.echo(f"Package: {pkg}")
     click.echo("[OK] Installation complete.")
+
+
+@run.command("paste")
+@click.option("--temp-dir", default="temp", show_default=True)
+def paste_cmd(temp_dir: str) -> None:
+    """Restore wheels from clipboard into a folder without installing."""
+    pkg, _, restored, size_mb = restore_wheels_from_clipboard(temp_dir=temp_dir)
+    click.echo(f"[OK] Restored {restored} wheels into '{temp_dir}'")
+    click.echo(f"Total size: {size_mb:.2f} MB")
+    if pkg:
+        click.echo(f"Package: {pkg}")
+    click.echo("[OK] Paste complete (no installation performed).")
