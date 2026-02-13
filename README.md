@@ -30,7 +30,7 @@ clipin install --dir temp
 # Optional: don't remove the temp files after installation
 clipin install --no-clean
 
-# 3) Restore wheels from clipboard only (no installation)
+# 3) Restore wheels from clipboard only (without installation)
 clipin paste
 
 # Optional: specify the dir to store .whl files
@@ -48,5 +48,11 @@ clipin paste --dir temp
 This project falls under the BSD 3-Clause License.
 
 ## History
+### v0.0.1
+* New subcommand `clipin paste` to restore wheels from clipboard only (without installation).
+* `clipin install`: 
+    * renamed option `--temp-dir` to `--dir` for convenience.
+    * new option `--clean/--no-clean` to determine whether temp files should be removed after installation.
+
 ### v0.0.0
 * Initial release.
