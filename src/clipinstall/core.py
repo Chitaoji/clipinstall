@@ -246,11 +246,8 @@ def _build_latest_local_wheel(package_dir: Path) -> str:
 
 def _extract_package_name(package_spec: str) -> str:
     """Extract package name from package spec text for pip uninstall."""
-    print(package_spec)
-    print("???")
     first_segment = package_spec.split(",", 1)[0].strip()
     normalized = re.split(r"[<>=!~\[\s]", first_segment, maxsplit=1)[0]
     if not normalized:
         raise ValueError(f"invalid package spec: {package_spec}")
-    print(normalized, "???")
     return normalized
