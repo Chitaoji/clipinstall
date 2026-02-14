@@ -6,6 +6,7 @@ import base64
 import glob
 import os
 import platform
+import re
 import subprocess
 import sys
 import tempfile
@@ -131,6 +132,13 @@ def _install_wheels(
     force_reinstall: bool = True,
 ) -> None:
     """Install restored wheel files from *temp_dir* without network."""
+    if force_reinstall:
+        package_name = _extract_package_name(pkg)
+        subprocess.run(
+            [sys.executable, "-m", "pip", "uninstall", "-y", package_name],
+            check=False,
+        )
+
     common = [
         sys.executable,
         "-m",
@@ -140,8 +148,6 @@ def _install_wheels(
         "--find-links",
         temp_dir,
     ]
-    if force_reinstall:
-        common.append("--force-reinstall")
 
     if install_deps:
         subprocess.run([*common, pkg], check=True)
@@ -236,3 +242,12 @@ def _build_latest_local_wheel(package_dir: Path) -> str:
 
     latest_wheel = max(wheels, key=lambda item: item.stat().st_mtime)
     return str(latest_wheel)
+
+
+def _extract_package_name(package_spec: str) -> str:
+    """Extract package name from package spec text for pip uninstall."""
+    first_segment = package_spec.split(",", 1)[0].strip()
+    normalized = re.split(r"[<>=!~\[\s]", first_segment, maxsplit=1)[0]
+    if not normalized:
+        raise ValueError(f"invalid package spec: {package_spec}")
+    return normalized
