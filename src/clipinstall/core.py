@@ -198,10 +198,6 @@ def _download_wheels(
     package_spec: str, dest_dir: str, include_deps: bool = False
 ) -> list[str]:
     """Download wheel files for *package_spec* into *dest_dir*."""
-    local_dir = Path(package_spec).expanduser()
-    if local_dir.is_dir():
-        return [_build_latest_local_wheel(local_dir)]
-
     os.makedirs(dest_dir, exist_ok=True)
 
     cmd = [
