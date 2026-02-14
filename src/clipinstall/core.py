@@ -6,6 +6,7 @@ import base64
 import glob
 import os
 import platform
+import re
 import subprocess
 import sys
 import tempfile
@@ -23,7 +24,9 @@ def copy_wheels_to_clipboard(
 ) -> dict[str, int | float]:
     """Download wheels and encode them into a clipboard payload."""
     temp_dir = tempfile.mkdtemp(prefix="wheel_bundle_")
-    wheels = _download_wheels(package_spec, temp_dir, include_deps=include_deps)
+    package_spec, wheels = _download_wheels(
+        package_spec, temp_dir, include_deps=include_deps
+    )
 
     parts = [
         "===CLIPINSTALL_PACKAGE===",
@@ -108,17 +111,36 @@ def restore_wheels_from_clipboard(
     return pkg, include_deps, restored, total_size / 1024 / 1024
 
 
-def restore_wheels_and_install(temp_dir: str = "temp") -> tuple[str, int, float]:
+def restore_wheels_and_install(
+    temp_dir: str = "temp", force_reinstall: bool = True
+) -> tuple[str, int, float]:
     """Restore wheels from clipboard and install them offline."""
     pkg, install_deps, restored, size_mb = restore_wheels_from_clipboard(
         temp_dir=temp_dir
     )
-    _install_wheels(temp_dir=temp_dir, pkg=pkg, install_deps=install_deps)
+    _install_wheels(
+        temp_dir=temp_dir,
+        pkg=pkg,
+        install_deps=install_deps,
+        force_reinstall=force_reinstall,
+    )
     return pkg, restored, size_mb
 
 
-def _install_wheels(temp_dir: str, pkg: str, install_deps: bool = True) -> None:
+def _install_wheels(
+    temp_dir: str,
+    pkg: str,
+    install_deps: bool = True,
+    force_reinstall: bool = True,
+) -> None:
     """Install restored wheel files from *temp_dir* without network."""
+    if force_reinstall:
+        package_name = _extract_package_name(pkg)
+        subprocess.run(
+            [sys.executable, "-m", "pip", "uninstall", "-y", package_name],
+            check=False,
+        )
+
     common = [
         sys.executable,
         "-m",
@@ -178,6 +200,10 @@ def _download_wheels(
     package_spec: str, dest_dir: str, include_deps: bool = False
 ) -> list[str]:
     """Download wheel files for *package_spec* into *dest_dir*."""
+    local_dir = Path(package_spec).expanduser()
+    if local_dir.is_dir():
+        package_spec = _build_latest_local_wheel(local_dir)
+
     os.makedirs(dest_dir, exist_ok=True)
 
     cmd = [
@@ -200,4 +226,36 @@ def _download_wheels(
         raise RuntimeError(
             "No .whl files downloaded (it may have fallen back to source)."
         )
-    return wheels
+    if local_dir.is_dir():
+        package_spec = local_dir.name
+    return package_spec, wheels
+
+
+def _build_latest_local_wheel(package_dir: Path) -> str:
+    """Build *package_dir* via install.py and return newest wheel in dist/."""
+    install_script = package_dir / "install.py"
+    if not install_script.is_file():
+        raise RuntimeError(f"install.py not found in directory: {package_dir}")
+
+    subprocess.run([sys.executable, str(install_script)], check=True, cwd=package_dir)
+
+    dist_dir = package_dir / "dist"
+    wheels = [path for path in dist_dir.glob("*.whl") if path.is_file()]
+    if not wheels:
+        raise RuntimeError(f"No .whl files found in dist directory: {dist_dir}")
+
+    latest_wheel = max(wheels, key=lambda item: item.stat().st_mtime)
+    return str(latest_wheel)
+
+
+def _extract_package_name(package_spec: str) -> str:
+    """Extract package name from package spec text for pip uninstall."""
+    first_segment = package_spec.split(",", 1)[0].strip()
+    if any(sep in first_segment for sep in ("/", "\\")):
+        path_name = Path(first_segment).name
+        if path_name:
+            return path_name
+    normalized = re.split(r"[<>=!~\[\s]", first_segment, maxsplit=1)[0]
+    if not normalized:
+        raise ValueError(f"invalid package spec: {package_spec}")
+    return normalized

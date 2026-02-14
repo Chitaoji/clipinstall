@@ -11,6 +11,10 @@ clipin copy requests==2.32.3
 # Optional: download with dependencies
 clipin copy requests==2.32.3 --deps
 
+# Local build mode: if PACKAGE_SPEC is a folder, run install.py in it and copy
+# the newest wheel under dist/
+clipin copy /path/to/your/project
+
 # 2) Restore wheels from clipboard and install them on the target machine
 clipin install
 
@@ -21,7 +25,7 @@ clipin install --dir temp
 # Optional: don't remove the temp files after installation
 clipin install --no-clean
 
-# 3) Restore wheels from clipboard only (no installation)
+# 3) Restore wheels from clipboard only (without installation)
 clipin paste
 
 # Optional: specify the dir to store .whl files
