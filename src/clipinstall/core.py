@@ -108,16 +108,28 @@ def restore_wheels_from_clipboard(
     return pkg, include_deps, restored, total_size / 1024 / 1024
 
 
-def restore_wheels_and_install(temp_dir: str = "temp") -> tuple[str, int, float]:
+def restore_wheels_and_install(
+    temp_dir: str = "temp", force_reinstall: bool = True
+) -> tuple[str, int, float]:
     """Restore wheels from clipboard and install them offline."""
     pkg, install_deps, restored, size_mb = restore_wheels_from_clipboard(
         temp_dir=temp_dir
     )
-    _install_wheels(temp_dir=temp_dir, pkg=pkg, install_deps=install_deps)
+    _install_wheels(
+        temp_dir=temp_dir,
+        pkg=pkg,
+        install_deps=install_deps,
+        force_reinstall=force_reinstall,
+    )
     return pkg, restored, size_mb
 
 
-def _install_wheels(temp_dir: str, pkg: str, install_deps: bool = True) -> None:
+def _install_wheels(
+    temp_dir: str,
+    pkg: str,
+    install_deps: bool = True,
+    force_reinstall: bool = True,
+) -> None:
     """Install restored wheel files from *temp_dir* without network."""
     common = [
         sys.executable,
@@ -128,6 +140,8 @@ def _install_wheels(temp_dir: str, pkg: str, install_deps: bool = True) -> None:
         "--find-links",
         temp_dir,
     ]
+    if force_reinstall:
+        common.append("--force-reinstall")
 
     if install_deps:
         subprocess.run([*common, pkg], check=True)
