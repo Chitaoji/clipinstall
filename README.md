@@ -20,6 +20,10 @@ clipin copy requests==2.32.3
 # Optional: download with dependencies
 clipin copy requests==2.32.3 --deps
 
+# Local build mode: if PACKAGE_SPEC is a folder, run install.py in it and copy
+# the newest wheel under dist/
+clipin copy /path/to/your/project
+
 # 2) Restore wheels from clipboard and install them on the target machine
 clipin install
 

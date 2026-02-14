@@ -192,6 +192,10 @@ def _download_wheels(
     package_spec: str, dest_dir: str, include_deps: bool = False
 ) -> list[str]:
     """Download wheel files for *package_spec* into *dest_dir*."""
+    local_dir = Path(package_spec).expanduser()
+    if local_dir.is_dir():
+        return [_build_latest_local_wheel(local_dir)]
+
     os.makedirs(dest_dir, exist_ok=True)
 
     cmd = [
@@ -215,3 +219,20 @@ def _download_wheels(
             "No .whl files downloaded (it may have fallen back to source)."
         )
     return wheels
+
+
+def _build_latest_local_wheel(package_dir: Path) -> str:
+    """Build *package_dir* via install.py and return newest wheel in dist/."""
+    install_script = package_dir / "install.py"
+    if not install_script.is_file():
+        raise RuntimeError(f"install.py not found in directory: {package_dir}")
+
+    subprocess.run([sys.executable, str(install_script)], check=True, cwd=package_dir)
+
+    dist_dir = package_dir / "dist"
+    wheels = [path for path in dist_dir.glob("*.whl") if path.is_file()]
+    if not wheels:
+        raise RuntimeError(f"No .whl files found in dist directory: {dist_dir}")
+
+    latest_wheel = max(wheels, key=lambda item: item.stat().st_mtime)
+    return str(latest_wheel)
