@@ -24,7 +24,9 @@ def copy_wheels_to_clipboard(
 ) -> dict[str, int | float]:
     """Download wheels and encode them into a clipboard payload."""
     temp_dir = tempfile.mkdtemp(prefix="wheel_bundle_")
-    wheels = _download_wheels(package_spec, temp_dir, include_deps=include_deps)
+    package_spec, wheels = _download_wheels(
+        package_spec, temp_dir, include_deps=include_deps
+    )
 
     parts = [
         "===CLIPINSTALL_PACKAGE===",
@@ -200,7 +202,7 @@ def _download_wheels(
     """Download wheel files for *package_spec* into *dest_dir*."""
     local_dir = Path(package_spec).expanduser()
     if local_dir.is_dir():
-        return [_build_latest_local_wheel(local_dir)]
+        package_spec = _build_latest_local_wheel(local_dir)
 
     os.makedirs(dest_dir, exist_ok=True)
 
@@ -224,7 +226,9 @@ def _download_wheels(
         raise RuntimeError(
             "No .whl files downloaded (it may have fallen back to source)."
         )
-    return wheels
+    if local_dir.is_dir():
+        package_spec = local_dir.name
+    return package_spec, wheels
 
 
 def _build_latest_local_wheel(package_dir: Path) -> str:
