@@ -200,6 +200,10 @@ def _download_wheels(
     """Download wheel files for *package_spec* into *dest_dir*."""
     os.makedirs(dest_dir, exist_ok=True)
 
+    local_path = Path(package_spec).expanduser()
+    if local_path.is_dir():
+        return [_build_latest_local_wheel(local_path)]
+
     cmd = [
         sys.executable,
         "-m",
@@ -243,6 +247,11 @@ def _build_latest_local_wheel(package_dir: Path) -> str:
 def _extract_package_name(package_spec: str) -> str:
     """Extract package name from package spec text for pip uninstall."""
     first_segment = package_spec.split(",", 1)[0].strip()
+    if any(sep in first_segment for sep in ("/", "\\")):
+        path_name = Path(first_segment).name
+        if path_name:
+            return path_name
+
     normalized = re.split(r"[<>=!~\[\s]", first_segment, maxsplit=1)[0]
     if not normalized:
         raise ValueError(f"invalid package spec: {package_spec}")
