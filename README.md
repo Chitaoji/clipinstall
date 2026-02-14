@@ -52,6 +52,11 @@ clipin paste --dir temp
 This project falls under the BSD 3-Clause License.
 
 ## History
+### v0.0.2
+* Local build mode: can download from local folder now.
+* `clipin install`:
+    * New option `--force/--no-force` to reinstall the package if exists.
+
 ### v0.0.1
 * New subcommand `clipin paste` to restore wheels from clipboard only (without installation).
 * `clipin install`: 
