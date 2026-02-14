@@ -136,10 +136,11 @@ def _install_wheels(
     """Install restored wheel files from *temp_dir* without network."""
     if force_reinstall:
         package_name = _extract_package_name(pkg)
-        subprocess.run(
-            [sys.executable, "-m", "pip", "uninstall", "-y", package_name],
-            check=False,
-        )
+        if _is_package_installed(package_name):
+            subprocess.run(
+                [sys.executable, "-m", "pip", "uninstall", "-y", package_name],
+                check=False,
+            )
 
     common = [
         sys.executable,
@@ -248,14 +249,20 @@ def _build_latest_local_wheel(package_dir: Path) -> str:
     return str(latest_wheel)
 
 
+def _is_package_installed(package_name: str) -> bool:
+    """Check whether *package_name* is already installed in current environment."""
+    result = subprocess.run(
+        [sys.executable, "-m", "pip", "show", package_name],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    return result.returncode == 0
+
+
 def _extract_package_name(package_spec: str) -> str:
     """Extract package name from package spec text for pip uninstall."""
-    first_segment = package_spec.split(",", 1)[0].strip()
-    if any(sep in first_segment for sep in ("/", "\\")):
-        path_name = Path(first_segment).name
-        if path_name:
-            return path_name
-    normalized = re.split(r"[<>=!~\[\s]", first_segment, maxsplit=1)[0]
-    if not normalized:
-        raise ValueError(f"invalid package spec: {package_spec}")
-    return normalized
+    match = re.match(r"^([A-Za-z0-9_.-]+)", package_spec.strip())
+    if not match:
+        raise ValueError(f"Invalid package spec: {package_spec}")
+    return match.group(1)
