@@ -51,6 +51,9 @@ clipin paste --dir temp
 This project falls under the BSD 3-Clause License.
 
 ## History
+### v0.0.3
+* Removed `__version__`, use `importlib.metadata.version(__name__)` instead.
+
 ### v0.0.2
 * Local build mode: can download from local folder now.
 * `clipin install`:
