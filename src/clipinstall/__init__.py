@@ -3,7 +3,6 @@
 Install packages on an offline machine through clipboard.
 
 ## Usage
-### CLI Command
 ```sh
 # 1) Download the package and copy it to clipboard on an online machine
 clipin copy requests==2.32.3

@@ -12,7 +12,6 @@ click
 ```
 
 ## Usage
-### CLI Command
 ```sh
 # 1) Download the package and copy it to clipboard on an online machine
 clipin copy requests==2.32.3
@@ -52,6 +51,9 @@ clipin paste --dir temp
 This project falls under the BSD 3-Clause License.
 
 ## History
+### v0.0.3
+* Removed `__version__`, use `importlib.metadata.version(__name__)` instead.
+
 ### v0.0.2
 * Local build mode: can download from local folder now.
 * `clipin install`:

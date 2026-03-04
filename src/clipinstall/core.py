@@ -1,4 +1,10 @@
-"""Core helpers for transferring wheel files through the system clipboard."""
+"""
+Core helpers for transferring wheel files through the system clipboard.
+
+NOTE: this module is private. All functions and objects are available in the main
+`clipinstall` namespace - use that instead.
+
+"""
 
 from __future__ import annotations
 
