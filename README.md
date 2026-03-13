@@ -33,6 +33,10 @@ clipin install --dir temp
 # Optional: don't remove the temp files after installation
 clipin install --no-clean
 
+# Optional: extract module .py files from the installed package wheel into --dir
+# (these files are kept and not removed)
+clipin install --extract
+
 # 3) Restore wheels from clipboard only (without installation)
 clipin paste
 
@@ -53,6 +57,11 @@ This project falls under the BSD 3-Clause License.
 ## History
 ### v0.0.4
 * Bugfix for `v0.0.3`.
+
+### Unreleased
+* `clipin install`:
+    * New option `--extract/--no-extract` to extract package module
+      `.py` files into `--dir` and keep them.
 
 ### v0.0.3
 * Removed `__version__`, use `importlib.metadata.version(__name__)` instead.
