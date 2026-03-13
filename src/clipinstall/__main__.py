@@ -41,25 +41,40 @@ def copy(package_spec: str, include_deps: bool) -> None:
 @click.option("--dir", "target_dir", default="temp", show_default=True)
 @click.option("--clean/--no-clean", default=True, show_default=True)
 @click.option("--force/--no-force", default=True, show_default=True)
-def install(target_dir: str, clean: bool, force: bool) -> None:
+@click.option(
+    "--extract/--no-extract",
+    "extract",
+    default=False,
+    show_default=True,
+)
+def install(target_dir: str, clean: bool, force: bool, extract: bool) -> None:
     """Restore wheels from clipboard and install them offline."""
     target_dir_exists = os.path.isdir(target_dir)
 
     pkg, restored, size_mb = restore_wheels_and_install(
-        temp_dir=target_dir, force_reinstall=force
+        temp_dir=target_dir,
+        force_reinstall=force,
+        extract_module_files=extract,
     )
     click.echo(f"[OK] Restored {restored} wheels into '{target_dir}'")
     click.echo(f"Total size: {size_mb:.2f} MB")
     if pkg:
         click.echo(f"Package: {pkg}")
     click.echo("[OK] Installation complete.")
+    if extract:
+        click.echo("[OK] Extracted package .py module files into target directory.")
 
     if clean:
+        for wheel in glob.glob(os.path.join(target_dir, "*.whl")):
+            os.remove(wheel)
+
         if target_dir_exists:
-            for wheel in glob.glob(os.path.join(target_dir, "*.whl")):
-                os.remove(wheel)
             click.echo(
                 f"[OK] Cleaned restored wheels from existing directory: {target_dir}"
+            )
+        elif extract:
+            click.echo(
+                f"[OK] Cleaned restored wheels and kept extracted files in directory: {target_dir}"
             )
         else:
             shutil.rmtree(target_dir, ignore_errors=True)

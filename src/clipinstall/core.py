@@ -16,6 +16,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import zipfile
 from pathlib import Path
 
 __all__ = [
@@ -118,7 +119,9 @@ def restore_wheels_from_clipboard(
 
 
 def restore_wheels_and_install(
-    temp_dir: str = "temp", force_reinstall: bool = True
+    temp_dir: str = "temp",
+    force_reinstall: bool = True,
+    extract_module_files: bool = False,
 ) -> tuple[str, int, float]:
     """Restore wheels from clipboard and install them offline."""
     pkg, install_deps, restored, size_mb = restore_wheels_from_clipboard(
@@ -130,6 +133,8 @@ def restore_wheels_and_install(
         install_deps=install_deps,
         force_reinstall=force_reinstall,
     )
+    if extract_module_files:
+        _extract_module_python_files(temp_dir=temp_dir, pkg=pkg)
     return pkg, restored, size_mb
 
 
@@ -205,36 +210,66 @@ def _paste_from_clipboard() -> str:
 
 def _download_wheels(
     package_spec: str, dest_dir: str, include_deps: bool = False
-) -> list[str]:
+) -> tuple[str, list[str]]:
     """Download wheel files for *package_spec* into *dest_dir*."""
-    local_dir = Path(package_spec).expanduser()
-    if local_dir.is_dir():
+    local_path = Path(package_spec).expanduser()
+    local_wheel = (
+        local_path
+        if local_path.is_file() and local_path.suffix.lower() == ".whl"
+        else None
+    )
+    local_dir = local_path if local_path.is_dir() else None
+
+    if local_dir is not None:
         package_spec = _build_latest_local_wheel(local_dir)
 
     os.makedirs(dest_dir, exist_ok=True)
 
-    cmd = [
-        sys.executable,
-        "-m",
-        "pip",
-        "download",
-        package_spec,
-        "--only-binary=:all:",
-        "--dest",
-        dest_dir,
-    ]
-    if not include_deps:
-        cmd.append("--no-deps")
+    if local_wheel is not None:
+        copied = Path(dest_dir, local_wheel.name)
+        copied.write_bytes(local_wheel.read_bytes())
 
-    subprocess.run(cmd, check=True)
+        name, version = _extract_name_and_version_from_wheel(local_wheel)
+        package_spec = f"{name}=={version}"
+
+        if include_deps:
+            subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "pip",
+                    "download",
+                    package_spec,
+                    "--only-binary=:all:",
+                    "--dest",
+                    dest_dir,
+                ],
+                check=True,
+            )
+    else:
+        cmd = [
+            sys.executable,
+            "-m",
+            "pip",
+            "download",
+            package_spec,
+            "--only-binary=:all:",
+            "--dest",
+            dest_dir,
+        ]
+        if not include_deps:
+            cmd.append("--no-deps")
+
+        subprocess.run(cmd, check=True)
 
     wheels = sorted(glob.glob(os.path.join(dest_dir, "*.whl")))
     if not wheels:
         raise RuntimeError(
             "No .whl files downloaded (it may have fallen back to source)."
         )
-    if local_dir.is_dir():
-        package_spec = local_dir.name
+    if local_dir is not None:
+        name, version = _extract_name_and_version_from_wheel(Path(package_spec))
+        package_spec = f"{name}=={version}"
     return package_spec, wheels
 
 
@@ -266,9 +301,47 @@ def _is_package_installed(package_name: str) -> bool:
     return result.returncode == 0
 
 
+def _extract_module_python_files(temp_dir: str, pkg: str) -> None:
+    """Extract package .py module files into *temp_dir* for inspection/reuse."""
+    package_name = _extract_package_name(pkg)
+    normalized = package_name.lower().replace("-", "_")
+
+    candidates = sorted(glob.glob(os.path.join(temp_dir, "*.whl")))
+    target_wheel = next(
+        (
+            wheel
+            for wheel in candidates
+            if os.path.basename(wheel).lower().startswith(f"{normalized}-")
+        ),
+        None,
+    )
+
+    if target_wheel is None:
+        return
+
+    with zipfile.ZipFile(target_wheel) as archive:
+        for member in archive.infolist():
+            if member.is_dir() or not member.filename.endswith(".py"):
+                continue
+            if ".dist-info/" in member.filename:
+                continue
+            archive.extract(member, path=temp_dir)
+
+
 def _extract_package_name(package_spec: str) -> str:
     """Extract package name from package spec text for pip uninstall."""
     match = re.match(r"^([A-Za-z0-9_.-]+)", package_spec.strip())
     if not match:
         raise ValueError(f"Invalid package spec: {package_spec}")
     return match.group(1)
+
+
+def _extract_name_and_version_from_wheel(wheel_path: Path) -> tuple[str, str]:
+    """Extract package name and version from a wheel filename."""
+    parts = wheel_path.name.split("-")
+    if len(parts) < 5:
+        raise ValueError(f"Invalid wheel filename: {wheel_path.name}")
+
+    name = parts[0].replace("_", "-")
+    version = parts[1]
+    return name, version
