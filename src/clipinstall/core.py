@@ -210,36 +210,66 @@ def _paste_from_clipboard() -> str:
 
 def _download_wheels(
     package_spec: str, dest_dir: str, include_deps: bool = False
-) -> list[str]:
+) -> tuple[str, list[str]]:
     """Download wheel files for *package_spec* into *dest_dir*."""
-    local_dir = Path(package_spec).expanduser()
-    if local_dir.is_dir():
+    local_path = Path(package_spec).expanduser()
+    local_wheel = (
+        local_path
+        if local_path.is_file() and local_path.suffix.lower() == ".whl"
+        else None
+    )
+    local_dir = local_path if local_path.is_dir() else None
+
+    if local_dir is not None:
         package_spec = _build_latest_local_wheel(local_dir)
 
     os.makedirs(dest_dir, exist_ok=True)
 
-    cmd = [
-        sys.executable,
-        "-m",
-        "pip",
-        "download",
-        package_spec,
-        "--only-binary=:all:",
-        "--dest",
-        dest_dir,
-    ]
-    if not include_deps:
-        cmd.append("--no-deps")
+    if local_wheel is not None:
+        copied = Path(dest_dir, local_wheel.name)
+        copied.write_bytes(local_wheel.read_bytes())
 
-    subprocess.run(cmd, check=True)
+        name, version = _extract_name_and_version_from_wheel(local_wheel)
+        package_spec = f"{name}=={version}"
+
+        if include_deps:
+            subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "pip",
+                    "download",
+                    package_spec,
+                    "--only-binary=:all:",
+                    "--dest",
+                    dest_dir,
+                ],
+                check=True,
+            )
+    else:
+        cmd = [
+            sys.executable,
+            "-m",
+            "pip",
+            "download",
+            package_spec,
+            "--only-binary=:all:",
+            "--dest",
+            dest_dir,
+        ]
+        if not include_deps:
+            cmd.append("--no-deps")
+
+        subprocess.run(cmd, check=True)
 
     wheels = sorted(glob.glob(os.path.join(dest_dir, "*.whl")))
     if not wheels:
         raise RuntimeError(
             "No .whl files downloaded (it may have fallen back to source)."
         )
-    if local_dir.is_dir():
-        package_spec = local_dir.name
+    if local_dir is not None:
+        name, version = _extract_name_and_version_from_wheel(Path(package_spec))
+        package_spec = f"{name}=={version}"
     return package_spec, wheels
 
 
@@ -304,3 +334,14 @@ def _extract_package_name(package_spec: str) -> str:
     if not match:
         raise ValueError(f"Invalid package spec: {package_spec}")
     return match.group(1)
+
+
+def _extract_name_and_version_from_wheel(wheel_path: Path) -> tuple[str, str]:
+    """Extract package name and version from a wheel filename."""
+    parts = wheel_path.name.split("-")
+    if len(parts) < 5:
+        raise ValueError(f"Invalid wheel filename: {wheel_path.name}")
+
+    name = parts[0].replace("_", "-")
+    version = parts[1]
+    return name, version
