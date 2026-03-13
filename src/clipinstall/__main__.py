@@ -65,11 +65,16 @@ def install(target_dir: str, clean: bool, force: bool, extract: bool) -> None:
         click.echo("[OK] Extracted package .py module files into target directory.")
 
     if clean:
+        for wheel in glob.glob(os.path.join(target_dir, "*.whl")):
+            os.remove(wheel)
+
         if target_dir_exists:
-            for wheel in glob.glob(os.path.join(target_dir, "*.whl")):
-                os.remove(wheel)
             click.echo(
                 f"[OK] Cleaned restored wheels from existing directory: {target_dir}"
+            )
+        elif extract:
+            click.echo(
+                f"[OK] Cleaned restored wheels and kept extracted files in directory: {target_dir}"
             )
         else:
             shutil.rmtree(target_dir, ignore_errors=True)
