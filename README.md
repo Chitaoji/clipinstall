@@ -55,13 +55,13 @@ clipin paste --dir temp
 This project falls under the BSD 3-Clause License.
 
 ## History
-### v0.0.4
-* Bugfix for `v0.0.3`.
-
-### Unreleased
+### v0.0.5
 * `clipin install`:
     * New option `--extract/--no-extract` to extract package module
       `.py` files into `--dir` and keep them.
+
+### v0.0.4
+* Bugfix for `v0.0.3`.
 
 ### v0.0.3
 * Removed `__version__`, use `importlib.metadata.version(__name__)` instead.
