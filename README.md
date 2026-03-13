@@ -23,6 +23,9 @@ clipin copy requests==2.32.3 --deps
 # the newest wheel under dist/
 clipin copy /path/to/your/project
 
+# Direct wheel mode: copy an existing .whl file
+clipin copy /path/to/dist/your_pkg-1.0.0-py3-none-any.whl
+
 # 2) Restore wheels from clipboard and install them on the target machine
 clipin install
 
