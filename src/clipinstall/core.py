@@ -16,6 +16,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import zipfile
 from pathlib import Path
 
 __all__ = [
@@ -118,7 +119,9 @@ def restore_wheels_from_clipboard(
 
 
 def restore_wheels_and_install(
-    temp_dir: str = "temp", force_reinstall: bool = True
+    temp_dir: str = "temp",
+    force_reinstall: bool = True,
+    extract_module_files: bool = False,
 ) -> tuple[str, int, float]:
     """Restore wheels from clipboard and install them offline."""
     pkg, install_deps, restored, size_mb = restore_wheels_from_clipboard(
@@ -130,6 +133,8 @@ def restore_wheels_and_install(
         install_deps=install_deps,
         force_reinstall=force_reinstall,
     )
+    if extract_module_files:
+        _extract_module_python_files(temp_dir=temp_dir, pkg=pkg)
     return pkg, restored, size_mb
 
 
@@ -264,6 +269,33 @@ def _is_package_installed(package_name: str) -> bool:
         text=True,
     )
     return result.returncode == 0
+
+
+def _extract_module_python_files(temp_dir: str, pkg: str) -> None:
+    """Extract package .py module files into *temp_dir* for inspection/reuse."""
+    package_name = _extract_package_name(pkg)
+    normalized = package_name.lower().replace("-", "_")
+
+    candidates = sorted(glob.glob(os.path.join(temp_dir, "*.whl")))
+    target_wheel = next(
+        (
+            wheel
+            for wheel in candidates
+            if os.path.basename(wheel).lower().startswith(f"{normalized}-")
+        ),
+        None,
+    )
+
+    if target_wheel is None:
+        return
+
+    with zipfile.ZipFile(target_wheel) as archive:
+        for member in archive.infolist():
+            if member.is_dir() or not member.filename.endswith(".py"):
+                continue
+            if ".dist-info/" in member.filename:
+                continue
+            archive.extract(member, path=temp_dir)
 
 
 def _extract_package_name(package_spec: str) -> str:
