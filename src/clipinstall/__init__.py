@@ -5,17 +5,17 @@ Install packages on an offline machine through clipboard.
 ## Usage
 ```sh
 # 1) Download the package and copy it to clipboard on an online machine
-clipin copy requests==2.32.3
+clipin download requests==2.32.3
 
 # Optional: download with dependencies
-clipin copy requests==2.32.3 --deps
+clipin download requests==2.32.3 --deps
 
 # Local build mode: if PACKAGE_SPEC is a folder, run install.py in it and copy
 # the newest wheel under dist/
-clipin copy /path/to/your/project
+clipin download /path/to/your/project
 
 # Direct wheel mode: copy an existing .whl file
-clipin copy /path/to/dist/your_pkg-1.0.0-py3-none-any.whl
+clipin download /path/to/dist/your_pkg-1.0.0-py3-none-any.whl
 
 # 2) Restore wheels from clipboard and install them on the target machine
 clipin install
