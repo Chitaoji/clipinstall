@@ -9,9 +9,10 @@ import shutil
 import click
 
 from .core import (
+    copy_files_to_clipboard,
     copy_wheels_to_clipboard,
+    restore_payload_from_clipboard,
     restore_wheels_and_install,
-    restore_wheels_from_clipboard,
 )
 
 
@@ -33,6 +34,18 @@ def download(package_spec: str, include_deps: bool) -> None:
     click.echo(
         f"Downloaded wheels: {stats['wheel_count']} (include_deps={include_deps})"
     )
+    click.echo(f"Total original size: {stats['original_size_mb']:.2f} MB")
+    click.echo(f"Total clipboard size: {stats['clipboard_size_mb']:.2f} MB")
+
+
+@run.command()
+@click.argument("path_spec")
+def copy(path_spec: str) -> None:
+    """Copy a local file/folder into clipboard for offline paste."""
+    stats = copy_files_to_clipboard(path_spec=path_spec)
+    click.echo("[OK] Copied file/folder payload to clipboard")
+    click.echo(f"Source: {stats['source']} ({stats['source_type']})")
+    click.echo(f"Contained files: {stats['file_count']}")
     click.echo(f"Total original size: {stats['original_size_mb']:.2f} MB")
     click.echo(f"Total clipboard size: {stats['clipboard_size_mb']:.2f} MB")
 
@@ -84,10 +97,20 @@ def install(target_dir: str, clean: bool, force: bool, extract: bool) -> None:
 @run.command()
 @click.option("--dir", "target_dir", default="temp", show_default=True)
 def paste(target_dir: str) -> None:
-    """Restore wheels from clipboard into a folder without installing."""
-    pkg, _, restored, size_mb = restore_wheels_from_clipboard(temp_dir=target_dir)
-    click.echo(f"[OK] Restored {restored} wheels into '{target_dir}'")
+    """Restore clipboard payload into a folder without installing."""
+    payload = restore_payload_from_clipboard(target_dir=target_dir)
+    restored = payload["restored_count"]
+    size_mb = payload["size_mb"]
+
+    if payload["payload_type"] == "package":
+        click.echo(f"[OK] Restored {restored} wheels into '{target_dir}'")
+        click.echo(f"Total size: {size_mb:.2f} MB")
+        if payload["name"]:
+            click.echo(f"Package: {payload['name']}")
+        click.echo("[OK] Paste complete (no installation performed).")
+        return
+
+    click.echo(f"[OK] Restored {restored} files into '{target_dir}'")
     click.echo(f"Total size: {size_mb:.2f} MB")
-    if pkg:
-        click.echo(f"Package: {pkg}")
+    click.echo(f"Source: {payload['name']} ({payload['source_type']})")
     click.echo("[OK] Paste complete (no installation performed).")
