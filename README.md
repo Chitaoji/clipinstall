@@ -64,6 +64,8 @@ clipin paste --dir temp
 This project falls under the BSD 3-Clause License.
 
 ## History
+### v0.0.6
+
 ### v0.0.5
 * `clipin install`:
     * New option `--extract/--no-extract` to extract package module
