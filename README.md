@@ -65,16 +65,17 @@ This project falls under the BSD 3-Clause License.
 
 ## History
 ### v0.0.6
+* Renamed package-fetch command to `clipin download PACKAGE_SPEC`.
+* `clipin download`:
+    * Supports direct wheel input from local `.whl` paths.
+* New command `clipin copy PATH` to copy a normal local file/folder through clipboard.
+* `clipin paste` now supports both package wheel payloads and generic file/folder payloads.
+* `clipin install` rejects generic file/folder payloads and asks to use `clipin paste`.
 
 ### v0.0.5
 * `clipin install`:
     * New option `--extract/--no-extract` to extract package module
       `.py` files into `--dir` and keep them.
-
-### next
-* New command `clipin copy PATH` to copy a normal local file/folder through clipboard.
-* `clipin paste` now supports both package wheel payloads and generic file/folder payloads.
-* `clipin install` rejects generic file/folder payloads and asks to use `clipin paste`.
 
 ### v0.0.4
 * Bugfix for `v0.0.3`.
