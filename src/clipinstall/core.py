@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import base64
 import glob
+import io
 import os
 import platform
 import re
@@ -20,7 +21,10 @@ import zipfile
 from pathlib import Path
 
 __all__ = [
+    "copy_files_to_clipboard",
     "copy_wheels_to_clipboard",
+    "restore_files_from_clipboard",
+    "restore_payload_from_clipboard",
     "restore_wheels_and_install",
     "restore_wheels_from_clipboard",
 ]
@@ -64,11 +68,65 @@ def copy_wheels_to_clipboard(
     }
 
 
+def copy_files_to_clipboard(path_spec: str) -> dict[str, int | float | str]:
+    """Archive a file/folder and encode it into a clipboard payload."""
+    source = Path(path_spec).expanduser().resolve()
+    if not source.exists():
+        raise FileNotFoundError(f"Path not found: {source}")
+
+    source_type = "dir" if source.is_dir() else "file"
+    file_count = 0
+    total_size = 0
+
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, mode="w", compression=zipfile.ZIP_DEFLATED) as archive:
+        if source.is_file():
+            archive.write(source, arcname=source.name)
+            file_count = 1
+            total_size = source.stat().st_size
+        else:
+            root = source.parent
+            for child in sorted(source.rglob("*")):
+                arcname = str(child.relative_to(root))
+                if child.is_dir():
+                    archive.writestr(f"{arcname}/", "")
+                    continue
+                archive.write(child, arcname=arcname)
+                file_count += 1
+                total_size += child.stat().st_size
+
+    zip_bytes = buffer.getvalue()
+    payload = "\n".join(
+        [
+            "===CLIPINSTALL_COPY===",
+            f"SOURCE: {source.name}",
+            f"TYPE: {source_type}",
+            f"FILE_COUNT: {file_count}",
+            f"ZIP_DATA: {base64.b64encode(zip_bytes).decode('utf-8')}",
+            "===END===",
+        ]
+    )
+    _copy_to_clipboard(payload)
+
+    return {
+        "source": source.name,
+        "source_type": source_type,
+        "file_count": file_count,
+        "original_size_mb": total_size / 1024 / 1024,
+        "clipboard_size_mb": len(payload) / 1024 / 1024,
+    }
+
+
 def restore_wheels_from_clipboard(
     temp_dir: str = "temp",
 ) -> tuple[str, bool, int, float]:
     """Restore wheel files from clipboard payload into *temp_dir*."""
     text = _paste_from_clipboard()
+    if "===CLIPINSTALL_COPY===" in text:
+        raise ValueError(
+            "Clipboard contains copied files/folders data, not package wheels. "
+            "Use 'clipin paste' instead of 'clipin install'."
+        )
     if "===CLIPINSTALL_PACKAGE===" not in text:
         raise ValueError("Invalid package format: missing header")
 
@@ -116,6 +174,68 @@ def restore_wheels_from_clipboard(
         raise ValueError("No wheels found in clipboard data")
 
     return pkg, include_deps, restored, total_size / 1024 / 1024
+
+
+def restore_files_from_clipboard(
+    target_dir: str = "temp",
+) -> tuple[str, str, int, float]:
+    """Restore copied file/folder payload into *target_dir*."""
+    text = _paste_from_clipboard()
+    if "===CLIPINSTALL_COPY===" not in text:
+        raise ValueError("Invalid copy format: missing header")
+
+    source_name = ""
+    source_type = "file"
+    zip_b64 = None
+    for line in text.splitlines():
+        item = line.strip()
+        if item.startswith("SOURCE:"):
+            source_name = item.split("SOURCE:", 1)[1].strip()
+        elif item.startswith("TYPE:"):
+            source_type = item.split("TYPE:", 1)[1].strip()
+        elif item.startswith("ZIP_DATA:"):
+            zip_b64 = item.split("ZIP_DATA:", 1)[1].strip()
+
+    if not zip_b64:
+        raise ValueError("Invalid copy format: missing ZIP_DATA")
+
+    os.makedirs(target_dir, exist_ok=True)
+    zip_bytes = base64.b64decode(zip_b64)
+    with zipfile.ZipFile(io.BytesIO(zip_bytes)) as archive:
+        archive.extractall(path=target_dir)
+        restored_files = len([name for name in archive.namelist() if not name.endswith("/")])
+
+    return source_name, source_type, restored_files, len(zip_bytes) / 1024 / 1024
+
+
+def restore_payload_from_clipboard(
+    target_dir: str = "temp",
+) -> dict[str, int | float | str | bool]:
+    """Restore either wheels or copied files based on clipboard payload header."""
+    text = _paste_from_clipboard()
+    if "===CLIPINSTALL_PACKAGE===" in text:
+        pkg, include_deps, restored, size_mb = restore_wheels_from_clipboard(
+            temp_dir=target_dir
+        )
+        return {
+            "payload_type": "package",
+            "name": pkg,
+            "include_deps": include_deps,
+            "restored_count": restored,
+            "size_mb": size_mb,
+        }
+    if "===CLIPINSTALL_COPY===" in text:
+        source, source_type, restored, size_mb = restore_files_from_clipboard(
+            target_dir=target_dir
+        )
+        return {
+            "payload_type": "copy",
+            "name": source,
+            "source_type": source_type,
+            "restored_count": restored,
+            "size_mb": size_mb,
+        }
+    raise ValueError("Invalid clipboard format: unsupported header")
 
 
 def restore_wheels_and_install(
