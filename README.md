@@ -12,8 +12,8 @@ click
 ```
 
 ## Usage
+1) Download the package and copy it to clipboard on an online machine
 ```sh
-# 1) Download the package and copy it to clipboard on an online machine
 clipin download requests==2.32.3
 
 # Optional: download with dependencies
@@ -25,14 +25,9 @@ clipin download /path/to/your/project
 
 # Direct wheel mode: copy an existing .whl file
 clipin download /path/to/dist/your_pkg-1.0.0-py3-none-any.whl
-
-# 2) (New) Copy a normal file/folder without package installation
-clipin copy /path/to/file_or_folder
-
-# Restore copied files/folders from clipboard on an offline machine
-clipin paste --dir temp
-
-# 3) Restore wheels from clipboard and install them on the target machine
+```
+2) Restore wheels from clipboard and install them on the target machine
+```sh
 clipin install
 
 # Optional: specify the temp dir to store .whl files, the temp dir will be removed after 
@@ -45,11 +40,19 @@ clipin install --no-clean
 # Optional: extract module .py files from the installed package wheel into --dir
 # (these files are kept and not removed)
 clipin install --extract
-
-# 4) Restore wheels from clipboard only (without installation)
+```
+3) Restore wheels from clipboard only (without installation)
+```sh
 clipin paste
 
 # Optional: specify the dir to store .whl files
+clipin paste --dir temp
+```
+4) Copy a normal file/folder without package installation
+```
+clipin copy /path/to/file_or_folder
+
+# Restore copied files/folders from clipboard on an offline machine
 clipin paste --dir temp
 ```
 
@@ -64,6 +67,9 @@ clipin paste --dir temp
 This project falls under the BSD 3-Clause License.
 
 ## History
+### v0.0.7
+* Updated README.
+
 ### v0.0.6
 * Renamed package-fetch command to `clipin download PACKAGE_SPEC`.
 * `clipin download`:
