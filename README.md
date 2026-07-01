@@ -67,6 +67,9 @@ clipin paste --dir temp
 This project falls under the BSD 3-Clause License.
 
 ## History
+### v0.0.7
+* Updated README.
+
 ### v0.0.6
 * Renamed package-fetch command to `clipin download PACKAGE_SPEC`.
 * `clipin download`:
